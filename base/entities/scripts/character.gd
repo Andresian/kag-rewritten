@@ -11,8 +11,10 @@ puppet var r_animation = ""
 puppet var r_flip_h = false
 ### ---
 
-onready var c_anim = $Animation
-onready var c_sprite = $Sprite
+onready var c_anim = $Sprite/Animation
+onready var c_body = $Sprite/Body
+onready var c_head = $Sprite/Head
+onready var c_name = $Name
 
 ### Physics
 export (int) var gravity = 500
@@ -23,6 +25,8 @@ var velocity = Vector2(0, 0)
 ### ---
 
 ### Input
+var flip_h = false
+
 var jumping = false
 var crouching = false
 
@@ -33,10 +37,18 @@ var moveLeft = false
 func _ready():
 	if is_network_master():
 		game_camera.target = self
+	
+	if network.players.has(get_network_master()):
+		var pinfo = network.players[get_network_master()]
+		c_name.text = pinfo.name
 
-func _animate(animation, flip_h = null):
+func _animate(animation, t_flip_h = null):
 	c_anim.play(animation)
-	c_sprite.flip_h = flip_h if flip_h != null else c_sprite.flip_h
+	
+	if t_flip_h != null && t_flip_h != flip_h:
+		flip_h = t_flip_h
+		
+		$Sprite.scale.x *= -1
 
 func _physics_process(delta):
 	if is_network_master():
@@ -66,7 +78,7 @@ func _process_input():
 		moveLeft = false
 	
 	# Jump
-	if Input.is_action_pressed("jump") and not (jumping or crouching):
+	if Input.is_action_pressed("jump") and not (jumping or crouching) and is_on_floor():
 		velocity.y = -jump_speed
 		jumping = true
 	
@@ -87,23 +99,20 @@ func _process_animation():
 				_animate("idle")
 		
 		if jumping:
-			jumping = false
-	else:
-		if jumping:
 			_animate("jump")
 
 func _sync():
 	if is_network_master():
 		if jumping and is_on_floor():
+			jumping = false
 			rpc_unreliable("_play_dust_effect", global_position)
 		
 		rset_unreliable("r_animation", c_anim.current_animation)
-		rset_unreliable("r_flip_h", c_sprite.flip_h)
+		rset_unreliable("r_flip_h", flip_h)
 		rset_unreliable("r_position", position)
 	else:
+		_animate(r_animation, r_flip_h)
 		position = r_position
-		c_anim.play(r_animation)
-		c_sprite.flip_h = r_flip_h
 ### ---
 
 ### Remote events
