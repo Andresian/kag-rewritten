@@ -3,45 +3,49 @@ extends Node2D
 export (int) var fps = 24
 
 ### Input
-puppetsync var flip_h = false
+var flip_horizontal = false
+puppetsync var r_flip_horizontal = false
 
-puppetsync var jumping = false
-puppetsync var crouching = false
-
-puppetsync var moveRight = false
-puppetsync var moveLeft = false
+puppetsync var r_move_left = false
+puppetsync var r_move_right = false
+puppetsync var r_crouching = false
+puppetsync var r_jumping = false
 ### ---
 
 func _physics_process(delta):
 	_sync(delta)
 
-	if is_network_master():
-		pass
-	else:
-		set_process_unhandled_input(false)
-
 func _unhandled_input(event):
+	if !is_network_master():
+		return
+
 	if Input.is_action_just_pressed("move_left"):
-		moveLeft = true
+		rset_id(1, "r_move_left", true)
 	if Input.is_action_just_released("move_left"):
-		moveLeft = false
+		rset_id(1, "r_move_left", false)
 
 	if Input.is_action_just_pressed("move_right"):
-		moveRight = true
+		rset_id(1, "r_move_right", true)
 	if Input.is_action_just_released("move_right"):
-		moveRight = false
+		rset_id(1, "r_move_right", false)
 
 	# Crouch
 	if Input.is_action_just_pressed("crouch"):
-		crouching = true
+		rset_id(1, "r_crouching", true)
 	if Input.is_action_just_released("crouch"):
-		crouching = false
+		rset_id(1, "r_crouching", false)
 
 	# Jump
 	if Input.is_action_just_pressed("jump"):
-		jumping = true
+		rset_id(1, "r_jumping", true)
 	if Input.is_action_just_released("jump"):
-		jumping = false
+		rset_id(1, "r_jumping", false)
+
+	if event is InputEventMouseMotion:
+		flip_horizontal = get_global_mouse_position().x < get_parent().global_position.x
+
+		if r_flip_horizontal != flip_horizontal:
+			rset("r_flip_horizontal", flip_horizontal)
 
 var timer = 0
 func _sync(delta):
@@ -50,9 +54,3 @@ func _sync(delta):
 		timer -= 1.0 / fps
 	else:
 		return
-
-	if is_network_master():
-		rset_id(1, "moveLeft", moveLeft)
-		rset_id(1, "moveRight", moveRight)
-		rset_id(1, "jumping", jumping)
-		rset_id(1, "crouching", crouching)

@@ -49,7 +49,8 @@ puppetsync func _show_emote(index):
 	timer.start(duration)
 	yield (timer, "timeout")
 
-	_hide_emote()
+	if texture != chat_emote:
+		_hide_emote()
 
 func _hide_emote():
 	animation.play("hide")
